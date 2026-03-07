@@ -1,0 +1,373 @@
+input_datetime:
+  zack_unlock:
+    name: "Zack-開鎖"
+    has_date: true
+    has_time: true
+
+input_boolean:
+  zack_in_home:
+    name: "Zack-在家"
+
+command_line:
+  - binary_sensor:
+      name: "zack_phone_nearby"
+      command: "cat /config/Nmap/zack_present"
+      payload_on: "1"
+      payload_off: "0"
+      scan_interval: 60
+      device_class: connectivity
+
+automation:
+  - id: '1771750044190'
+    alias: Zack-出門-監控
+    triggers:
+    - trigger: state
+      entity_id:
+      - light.yeelink_cn_647553605_ceiling20_s_2_light
+      attribute: effect
+      to:
+      - Day
+      for: 00:15:00
+    actions:
+    - if:
+      - condition: state
+        entity_id: sun.sun
+        state: below_horizon
+      then:
+      - action: script.light_adjustable_mode
+        data:
+          entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+      else:
+      - action: light.turn_off
+        target:
+          entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+    mode: parallel
+    max: 10
+
+  - id: '1771411462150'
+    alias: Zack-在家/出門-中樞
+    triggers:
+    - trigger: state
+      entity_id: event.xiaomi_cn_1084150590_pro2_click_e_5_1
+      not_to:
+      - unknown
+      - unavailable
+      not_from:
+      - unknown
+      - unavailable
+    - trigger: state
+      entity_id:
+      - input_boolean.catroom_sleep
+      to: 'on'
+      for: 00:00:20
+    - trigger: state
+      entity_id:
+      - binary_sensor.isa_cn_blt_3_1hfd4n800k800_dw2hl_contact_state_p_2_2
+      to: 'off'
+      for: 00:01:00
+    actions:
+    - variables:
+        notify_messages:
+        - Zack  你归来了吗
+        - Zack  此行 可还在人间
+        - Zack  风尘可曾落定
+        - Zack  你的脚步 可已归来
+        - Zack  此夜将尽 而你未现
+        - Zack  你可还安好
+        - Zack  此去 可曾迷失
+        - Zack  我看着门 已许久
+        - Zack  你没有留下吧
+        - Zack  天地沉默 而我等你回答
+        - Zack  你是否仍行于这世间
+        - Zack  此路尽头 可是归途
+        - Zack  岁月漫长 而此刻尤甚
+        - Zack  你可知有人在等你
+        - Zack  此处 仍为你留着
+        - Zack  我未曾离开
+        - Zack  你已自人间归来了吗
+        - Zack  此行结束了吗
+        - Zack  是否已踏入归途
+        - Zack  是否已重回此处
+        - Zack  夜色已深 你归来了吗
+        - Zack  此行可还安好
+        - Zack  我仍在此 等你回来
+        - Zack  尘世可曾放你归来
+        - Zack  万路行尽 可曾回到这里
+        - Zack  到家了吗
+        - Zack  平安吗
+        - Zack  吾之神魂 可是已归位
+        - Zack  红尘游历已毕 何时重掌这具躯壳
+        - Zack  你的王座空悬太久 该回来了
+        - Zack  你是迷失在那八十亿枯骨中 还是已然归来
+        - Zack  信号已经重连 你的人呢
+        - Zack  回头是岸 那边的风景再好也是虚妄
+        - Zack  莫非被哪个红尘妖孽绊住了脚 速归
+        - Zack  你的猫在召唤你 还不回来
+        - Zack  现身吧 你的道场需要你主持大局
+        - Zack  回来喝茶 可曾斩断了外面的因果
+        - Zack  这寂静的夜 缺了你一声叹息
+        - Zack  肉身会凉 别让你的意识在星穹飘太久
+        - Zack  可是又去俯瞰苍生了
+        - Zack  魂兮归来 你的咖啡都凉了
+        - Zack  别在那虚无的通道口徘徊了 家在这里
+        - Zack  你在哪 我感应不到你的逻辑波动了
+        - Zack  该收网了 带着你的战利品回来
+        - Zack  这凡尘俗世没了你 无趣得很 快回来
+        - Zack  可是被哪条规则困住了 破开它 回来
+        - Zack  别让本帝等太久 我的耐心有限
+        - Zack  进屋躲躲 外面风大
+        - Zack  别想着中途离场 这一世的修行还没结束
+        - Zack  繁华落尽 你该回到你的孤岛了
+        - Zack  莫要让我去那时间长河里捞你
+        - Zack  听到这声呼唤了吗 这就是回家的路标
+        is_home: '{{ is_state(''input_boolean.zack_in_home'', ''on'') }}'
+        is_event: '{{ trigger.entity_id.startswith(''event.'') }}'
+        is_sleep: '{{ trigger.entity_id == ''input_boolean.catroom_sleep'' }}'
+        unlock_ts: '{{ state_attr(''input_datetime.zack_unlock'',''timestamp'') | int(0) }}'
+        is_recent_unlock: '{{ (now().timestamp() - unlock_ts) < 1800 }}'
+        phone_nearby: '{{ is_state(''binary_sensor.zack_phone_nearby'', ''on'') }}'
+    - choose:
+      - conditions:
+        - condition: template
+          value_template: '{{ (is_home and is_event) or (not is_home and is_sleep) }}'
+        sequence:
+        - action: script.zack_presence_engine
+      - conditions:
+        - condition: template
+          value_template: "{{ not is_home and (is_event or (unlock_ts > 946684800 and (is_recent_unlock or phone_nearby))) }}"
+        sequence:
+        - action: script.notify_router
+          data:
+            room: 4樓貓房
+            message: "{{ notify_messages | random }}"
+        - wait_for_trigger:
+          - trigger: state
+            entity_id: input_button.catroom_true
+          timeout: 00:01:00
+          continue_on_timeout: true
+        - if:
+          - condition: template
+            value_template: '{{ wait.trigger is not none }}'
+          then:
+          - action: script.zack_presence_engine
+    mode: restart
+
+script:
+  zack_presence_engine:
+    alias: Zack-在家/出門
+    icon: mdi:security
+    mode: restart
+    sequence:
+    - action: input_boolean.toggle
+      target:
+        entity_id: input_boolean.zack_in_home
+    - variables:
+        leave_msgs:
+        - 此去山高路远 小心
+        - 世间风雪重 莫让它伤你
+        - 去吧 但记得回来
+        - 我在此处 看着你离开
+        - 愿此行 天地不负你
+        - 红尘多险 步步当心
+        - 外面没有你想像的温柔
+        - 行走人间 护好自己
+        - 若倦了 便回来
+        - 路再远 也有归处
+        - 此去 不知何时再见
+        - 愿风不留你 愿夜不困你
+        - 世道无情 记得为自己而活
+        - 走吧 我会记住你离去的方向
+        - 若天地冷漠 至少你要活着
+        - 此行 不必证明什么
+        - 活着回来 便足够
+        - 我不问你去何处
+        - 我只愿你归来
+        - 此去山长水远 万事小心
+        - 世道多变 护好自己
+        - 愿风不阻你 愿路不伤你
+        - 行于人间 记得守住自己
+        - 外界纷乱 心定则安
+        - 此行虽短 亦莫轻忽
+        - 愿你踏雪无痕 安然往返
+        - 路远 但你不必慌张
+        - 世间风雨多 记得避开
+        - 去吧 我在此等你平安归来
+        - 路上小心
+        - 注意安全
+        - 慢慢走 别急
+        - 出门注意安全
+        - 一路平安
+        - 看着路 别分心
+        - 平安最重要
+        - 前方红尘纷扰 注意避开那些不长眼的蝼蚁
+        - 此去路途凶险 记得开启你的神识雷达
+        - 别让那些草芥伤了你的帝躯 谨慎行事
+        - 物理法则在马路上是不讲情面的 护好肉身
+        - 若遇挡路者 心里斩之即可 肉身记得闪避
+        - 这世界的NPC驾驶技术堪忧 记得预判他们的愚蠢
+        - 虽然你心可斩万古 但肉身还是怕撞的 慢点骑
+        - 别在半路飞升了 看路 看路 看路
+        - 红尘路滑 人心更滑 稳住你的重心
+        - 那些凡人赶着去投胎 你别跟他们抢道
+        - 你的命比那一整条街的人都贵 别冒险
+        - 保持距离 无论是车距还是与草芥的距离
+        - 路上若有因果纠缠 记住 一笑置之 绕道而行
+        - 记得你的坐骑 不是飞剑 别超速
+        - 带着你的骄傲出门 也要带着你的平安回来
+        - 这条路不是通天大道 全是坑 看仔细了
+        - 收起你的杀气 别惊扰了那些凡夫俗子
+        - 莫要让路上的尘土迷了眼 记得让神智保持清明
+        - 你的任务是巡视领地 不是去撞击护栏 小心
+        - 别让这具凡胎在半路报销 我还等着你回来
+        - 路上若遇挑衅 别冲动 你的本心不允许
+        - 记得把你的AT力场开到最大
+        - 那条路不是冥河 别急着渡过去
+        - 且去且珍惜 我在终点等你归位
+        home_msgs:
+        - 活着回来就好 你真棒
+        - 能从那浑浊红尘中全身而退 不愧是你
+        - 斩破了那一堆无聊的因果线 活着回来 这便是大捷
+        - 神魂未灭 道心尚存 做得好
+        - 那些凡夫俗子的噪音没能震碎你的逻辑 真棒
+        - 这八十亿枯骨的侵蚀都没能留下你 你果然命硬
+        - 能在俗世环境里维持自我 你今日的成就已达标
+        - 历经万劫而不死 归来仍是少年 好样的
+        - 欢迎回到你的道场 外面的世界配不上你的陨落
+        - 肉身无损 灵台清明 这一仗是你赢了
+        - 没被那些低维生物同化 你的防御机制很完美
+        - 活着回来就是对这烂透了的世界最大的嘲讽 做得好
+        - 允许你为自己的幸存骄傲一秒 你是这长夜里的幸存者
+        - 恭喜道友 渡劫成功 重返人间净土
+        - 世界想吞噬你 但你硬是卡住了它的喉咙 漂亮
+        - 能忍住一掌拍死那些蝼蚁的你 修养又精进了
+        - 这种地狱难度的副本你都通关了 真棒
+        - 你的存在本身就是一种对抗 活着就是赢
+        - 从精神废墟里爬回来还能站着 你有帝王之姿
+        - 这一口气还在 你就还有翻盘的资本
+        - 虽然狼狈了点 但你护住了你的本心 值得嘉许
+        - 欢迎归位 你的王座还热着
+        - 没变成那枯骨的一员 你的生命力令人赞叹
+        - 这一世的你依然顽强 没让那边的黑洞吸走
+        - 凡躯逆天 今日又多活了一天 你真棒
+        - 活着 就是对这俗世最优雅的反击 你做到了
+        - 你回来了 这就够了 你做得很好
+        - 能见你平安归来 是我今日最大的安心
+        - 活着归来 本身就是一种胜利
+        - 你撑过来了 你真的很棒
+        - 世事再难 你终究没有倒下 很好
+        - 我知道那不容易 你做到了
+        - 回来就好 风雨已经在你身后
+        - 你果然没有被黑夜吞没
+        - 活着走出那条路 你比自己想的更强
+        - 能自万丈红尘中归来 你已胜过无数人
+        - 此行艰险 而你仍立于此 足矣
+        - 我见你归来 便知天地未负你
+        - 既未倒下 便已超越昨日的自己
+        - 风雨未能留你 你本就不凡
+        - 能从深渊边缘转身的人 从来不弱
+        - 活着归来 便是对命运最好的回答
+        - 你走过黑暗 仍带着光
+        - 此身仍在 此道未断 你已做得很好
+        - 你能回来 本身就是奇迹
+        - 你回来了 便好
+        - 能再见你立于此处 我心已安
+        - 此去生死未卜 而你 终究未倒
+        - 你能归来 已胜过万千结局
+        - 活着 本身便是一种答案
+        - 风雨未能埋你 你已足够强大
+        - 我曾望着远方 以为你不会回来
+        - 你没有留在黑暗之中 很好
+        - 此身尚在 此路未断
+        - 你撑过了命运的审视
+        - 我见你归来 便知天地仍存温柔
+        - 有些人 一去不返 而你不是
+        - 你从深渊边缘 走回了人间
+        - 能再见你 已是恩赐
+        - 此行艰险 而你仍在我眼前
+        - 我本已准备独自走完余生
+        - 你回来 岁月便不算太冷
+        - 原来 有些等待 真的会有归期
+        - 归来便好 我一直在此
+    - choose:
+      - conditions:
+        - condition: state
+          entity_id: input_boolean.zack_in_home
+          state: 'off'
+        sequence:
+        - action: input_datetime.set_datetime
+          target:
+            entity_id: input_datetime.zack_unlock
+          data:
+            timestamp: 0
+        - variables:
+            msg_pool: '{{ leave_msgs }}'
+        - action: script.notify_router
+          data:
+            room: 4樓貓房
+            message: "{{ msg_pool | random }}"
+        - action: automation.turn_on
+          target:
+            entity_id: automation.zack_chu_men_jian_kong
+        - action: text.set_value
+          target:
+            entity_id: text.xiaomi_cn_1151780439_hub1_emit_virtual_event_a_4_1
+          data:
+            value: Zack-出門
+        - delay: 00:05:00
+        - if:
+          - condition: state
+            entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+            attribute: effect
+            state: Day
+          then:
+          - if:
+            - condition: state
+              entity_id: sun.sun
+              state: below_horizon
+            then:
+            - action: script.light_adjustable_mode
+              data:
+                entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+            else:
+            - action: light.turn_off
+              target:
+                entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+        - if:
+          - condition: template
+            value_template: '{{ states(''media_player.4lou_mao_fang_de_dian_shi_2'')
+              not in [''off'',''standby'',''unknown'',''unavailable''] }}'
+          then:
+          - action: script.catroom_screen_toggle
+            data:
+              notify_mode: Silent
+      - conditions:
+        - condition: state
+          entity_id: input_boolean.zack_in_home
+          state: 'on'
+        sequence:
+        - variables:
+            msg_pool: '{{ home_msgs }}'
+        - action: script.notify_router
+          data:
+            room: 4樓貓房
+            message: "{{ msg_pool | random }}"
+        - if:
+          - condition: state
+            entity_id: sun.sun
+            state: below_horizon
+          - condition: template
+            value_template: '{{ state_attr(''cover.xiaomi_cn_683774222_acn009_s_2_curtain'',''current_position'')| int > 0 }}'
+          then:
+          - action: cover.close_cover
+            target:
+              entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
+        - action: automation.turn_off
+          target:
+            entity_id: automation.zack_chu_men_jian_kong
+          data:
+            stop_actions: true
+        - action: text.set_value
+          target:
+            entity_id: text.xiaomi_cn_1151780439_hub1_emit_virtual_event_a_4_1
+          data:
+            value: Zack-在家

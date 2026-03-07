@@ -1,0 +1,10 @@
+services:
+  LibreSpeed:
+    image: adolfintel/speedtest:latest
+    container_name: LibreSpeed
+    restart: unless-stopped
+    network_mode: bridge
+    environment:
+      - TZ=Asia/Taipei
+    ports:
+      - "38919:80"

@@ -1,0 +1,206 @@
+template:
+# 客廳有人值
+  - binary_sensor:
+      - name: "living_room_occupied"
+        unique_id: living_room_occupied
+        device_class: occupancy
+# 邏輯核心：只要任何一顆 ES3 不是「無人」，就視為有偵測到人
+        state: >
+          {% set s1 = states('binary_sensor.linp_cn_blt_3_1kfkj5nio4k02_es2_occupancy_status_p_2_1078') %}
+          {% set s2 = states('binary_sensor.linp_cn_blt_3_1l8k1ep70kc00_es2_occupancy_status_p_2_1078') %}
+          {{ (s1 not in ['off', 'unknown', 'unavailable']) or (s2 not in ['off', 'unknown', 'unavailable']) }}
+# 任一顆偵測到人後，持續 9 分鐘才變為 on
+        delay_on: 00:09:00
+# 兩顆都顯示無人後，持續 11 分鐘才變為 off
+        delay_off: 00:11:00
+
+automation:
+  - id: '1770539162781'
+    alias: 客廳-無人-監控
+    description: 無人維持20分鐘(3+11+6)關電視及調整燈光
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.living_room_occupied
+        to: 'off'
+        for: 00:06:00
+    variables:
+      light: light.yeelink_cn_648081925_ceiling20_s_2_light
+      tv: media_player.aquos_tvw21a
+    conditions:
+      - condition: state
+        entity_id:
+          - binary_sensor.linp_cn_blt_3_1l8k1ep70kc00_es2_occupancy_status_p_2_1078
+          - binary_sensor.linp_cn_blt_3_1kfkj5nio4k02_es2_occupancy_status_p_2_1078
+        state: "off"
+    actions:
+      - if:
+          - condition: template
+            value_template: "{{ states(tv) not in ['off', 'standby', 'unavailable', 'unknown'] }}"
+        then:
+          - action: script.livingroom_tv_toggle
+            data:
+              notify_mode: Silent
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state(light, 'on') }}"
+              - condition: time
+                before: "16:00:00"
+            sequence:
+              - action: light.turn_off
+                target:
+                  entity_id: "{{ light }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state_attr(light, 'effect', 'Day') }}"
+            sequence:
+              - action: script.light_adjustable_mode
+                data:
+                  entity_id: "{{ light }}"
+    mode: single
+
+  - id: '1770390393411'
+    alias: 客廳-HVAC開啟時門未關-通知
+    description: 2分提醒/10分關機
+    variables:
+      door: binary_sensor.isa_cn_blt_3_1gks22o60kk00_dw2hl_contact_state_p_2_2
+      hvac: climate.xiaomi_cn_930597336_rr0r00
+    triggers:
+    - trigger: state
+      entity_id: binary_sensor.isa_cn_blt_3_1gks22o60kk00_dw2hl_contact_state_p_2_2
+      to: 'on'
+      for: 00:02:00
+    - trigger: state
+      entity_id: climate.xiaomi_cn_930597336_rr0r00
+      from: 'off'
+      for: 00:02:00
+    conditions:
+      - condition: template
+        value_template: "{{ is_state(door, 'on') }}"
+      - condition: template
+        value_template: "{{ states(hvac) not in ['off', 'unknown', 'unavailable'] }}"
+    actions:
+    - action: script.notify_router
+      data:
+        room: 客廳
+        message: 警告 客廳門未關好
+    - wait_for_trigger:
+        - trigger: template
+          value_template: "{{ is_state(door, 'off') }}"
+      timeout: 00:08:00
+    - if:
+      - condition: template
+        value_template: '{{ wait.trigger is none }}'
+      then:
+      - action: script.notify_router
+        data:
+          room: 客廳
+          message: 警告 客廳門超時未關好 空調自動關閉
+      - action: climate.turn_off
+        target:
+          entity_id: "{{ hvac }}"
+    mode: restart
+
+  - id: '1770539235752'
+    alias: 客廳-HVAC參數-中樞
+    description: 派發參數1.無人維持15分鐘(3+11+1) 2.有人維持10分鐘(9+1) 3.空調模式變更過1分
+    triggers:
+    - trigger: state
+      entity_id: climate.xiaomi_cn_930597336_rr0r00
+      not_to:
+      - 'off'
+      - unavailable
+      - unknown
+    - trigger: state
+      entity_id:
+      - binary_sensor.living_room_occupied
+      to:
+      - 'on'
+      - 'off'
+    actions:
+    - action: script.livingroom_hvac_policy
+    mode: single
+
+script:
+  livingroom_hvac_policy:
+    alias: 客廳-HVAC
+    icon: "mdi:security"
+    mode: restart
+    variables:
+      c: climate.xiaomi_cn_930597336_rr0r00
+      purify_sel: select.xiaomi_cn_930597336_rr0r00_purify_switch_p_2_17
+      air_fresh_fan: fan.xiaomi_cn_930597336_rr0r00_s_14_air_fresh
+      eco_sw: switch.xiaomi_cn_930597336_rr0r00_eco_p_2_7
+      heater_sw: switch.xiaomi_cn_930597336_rr0r00_heater_p_2_9
+      left_sel: select.xiaomi_cn_930597336_rr0r00_horizontal_position_p_3_21
+      right_sel: select.xiaomi_cn_930597336_rr0r00_horizontal_position_p_3_23
+      wind_sel: select.xiaomi_cn_930597336_rr0r00_wind_direction_p_3_11
+      occ_cool: 28
+      occ_heat: 22.5
+      occ_air: 66
+      vac_cool: 30
+      vac_heat: 19
+      vac_air: 33
+    sequence:
+      - delay: 00:01:00
+      - condition: template
+        value_template: "{{ states(c) not in ['off', 'unavailable', 'unknown'] }}"
+      - variables:
+          is_occupied: "{{ is_state('binary_sensor.living_room_occupied', 'on') }}"
+          hvac_mode: "{{ states(c) }}"
+          target_temp: >-
+            {% if hvac_mode == 'heat' %} {{ occ_heat if is_occupied else vac_heat }}
+            {% elif hvac_mode == 'cool' %} {{ occ_cool if is_occupied else vac_cool }}
+            {% else %} {{ state_attr(c, 'temperature') }} {% endif %}
+          target_fm: "{{ '三档' if hvac_mode == 'fan_only' else '自动' }}"
+          target_wind: "{{ '地毯风' if hvac_mode == 'heat' else '天幕风' }}"
+          target_left: "左定格"
+          target_right: "{{ '中定格' if is_occupied else '右定格' }}"
+          target_air_pct: "{{ occ_air if is_occupied else vac_air }}"
+      - if: "{{ is_state(purify_sel, '净化打开') }}"
+        then:
+          - action: select.select_option
+            target: { entity_id: "{{ purify_sel }}" }
+            data: { option: "净化关闭" }
+      - if: "{{ is_state(air_fresh_fan, 'off') }}"
+        then:
+          - action: fan.turn_on
+            target: { entity_id: "{{ air_fresh_fan }}" }
+      - if: "{{ state_attr(c, 'temperature') != target_temp }}"
+        then:
+          - action: climate.set_temperature
+            target: { entity_id: "{{ c }}" }
+            data: { temperature: "{{ target_temp }}" }
+      - if: "{{ hvac_mode in ['heat', 'cool'] and is_state(eco_sw, 'off') }}"
+        then:
+          - action: switch.turn_on
+            target: { entity_id: "{{ eco_sw }}" }
+      - if: "{{ hvac_mode == 'heat' and is_state(heater_sw, 'on') }}"
+        then:
+          - action: switch.turn_off
+            target: { entity_id: "{{ heater_sw }}" }
+      - if: "{{ state_attr(c, 'fan_mode') != target_fm }}"
+        then:
+          - action: climate.set_fan_mode
+            target: { entity_id: "{{ c }}" }
+            data: { fan_mode: "{{ target_fm }}" }
+      - if: "{{ states(wind_sel) != target_wind }}"
+        then:
+          - action: select.select_option
+            target: { entity_id: "{{ wind_sel }}" }
+            data: { option: "{{ target_wind }}" }
+      - if: "{{ states(left_sel) != target_left }}"
+        then:
+          - action: select.select_option
+            target: { entity_id: "{{ left_sel }}" }
+            data: { option: "{{ target_left }}" }
+      - if: "{{ states(right_sel) != target_right }}"
+        then:
+          - action: select.select_option
+            target: { entity_id: "{{ right_sel }}" }
+            data: { option: "{{ target_right }}" }
+      - if: "{{ state_attr(air_fresh_fan, 'percentage') != target_air_pct }}"
+        then:
+          - action: fan.set_percentage
+            target: { entity_id: "{{ air_fresh_fan }}" }
+            data: { percentage: "{{ target_air_pct }}" }

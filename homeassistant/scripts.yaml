@@ -1,0 +1,26 @@
+catroom_screen_toggle:
+  alias: 4樓貓房-電視&螢幕開關切換
+  use_blueprint:
+    path: 電視&螢幕開關切換.yaml
+    input:
+      display_name: 螢幕
+      media_player_entity: media_player.mitv_moeu0
+livingroom_tv_toggle:
+  alias: 客廳-電視&螢幕開關切換
+  use_blueprint:
+    path: 電視&螢幕開關切換.yaml
+    input:
+      display_name: 電視
+      media_player_entity: media_player.aquos_tvw21a
+catroom_notify:
+  alias: 4樓貓房-音箱通知派發
+  use_blueprint:
+    path: 音箱通知派發.yaml
+    input:
+      text_entity: text.xiaomi_cn_1078830597_l17a_play_text_a_7_3
+livingroom_notify:
+  alias: 客廳-音箱通知派發
+  use_blueprint:
+    path: 音箱通知派發.yaml
+    input:
+      text_entity: text.xiaomi_cn_1106002786_l17a_play_text_a_7_3

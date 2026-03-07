@@ -1,0 +1,95 @@
+automation:
+  - id: '1770293569043'
+    alias: 1樓-門鈴-廣播
+    triggers:
+      - trigger: state
+        entity_id: event.xiaomi_cn_1144610668_s20pro_doorbell_ring_e_5_1006
+        not_to:
+          - unknown
+          - unavailable
+    conditions:
+      - condition: template
+        value_template: >
+          {% set event_ts = trigger.to_state.attributes['当前时间（unix timestamp）'] | int(0) %}
+          {{ (now().timestamp() - event_ts) < 5 }}
+    actions:
+      - action: script.notify_router
+        data:
+          room: All
+          message: "叮咚 叮咚 有人按門鈴唷"
+      - delay: 00:00:08
+    mode: single
+    max_exceeded: silent
+
+  - id: '1770384877859'
+    alias: 全屋-下雨/雨停-廣播
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.linp_cn_blt_3_1jqdv9jtg4c00_rs1bb_submersion_state_p_2_1006
+        from: 'off'
+        to: 'on'
+        id: "raining"
+      - trigger: state
+        entity_id: binary_sensor.linp_cn_blt_3_1jqdv9jtg4c00_rs1bb_submersion_state_p_2_1006
+        from: 'on'
+        to: 'off'
+        id: "stopped"
+    actions:
+      - action: script.notify_router
+        data:
+          room: All
+          message: "{{ '雨落下了 窗外已是一片混沌' if trigger.id == 'raining' else '云雾散尽 雨停了' }}"
+    mode: single
+
+
+  - id: '1770305012689'
+    alias: 4樓貓房-門未關上-廣播
+    description: 當門開啟超過兩分鐘，持續播報隨機警告訊息直到門關上
+    triggers:
+    - trigger: state
+      entity_id: binary_sensor.isa_cn_blt_3_1hfd4n800k800_dw2hl_contact_state_p_2_2
+      to: 'on'
+      for: 00:02:00
+    actions:
+    - variables:
+        warning_msgs:
+        - 警告 四楼结界已破 妖兽即将出闸
+        - 警告 第四收容所出现缺口 毛状收容物准备突破防线
+        - 警告 四楼封印松动 喵喵正在策划越狱
+        - 警告 门禁失效 四楼的幽影正伺机而动
+        - 警告 猫房门 没关 注意防范猫咪溢出
+        - 警告 猫咪越狱副本已开启 请迅速关闭四楼闸门
+        - 警告 结界未合 请警惕四楼毛茸茸的偷渡客
+        - 警告 四楼防线崩溃 敌军还有三十秒到达战场
+        - 警告 猫房门 消失 使徒即将来袭
+        - 警告 物理隔离失效 四楼生物活动版图正在扩张
+        - 警告 门没关好 那些毛茸茸的草芥要出来巡视了
+        - 警告 四楼封印松动 请立刻前往重新镇压
+        - 警告 猫正在门口看者你 并准备跨越边界
+        - 警告 四楼闸门异常 喵喵逃逸机率99
+        - 请注意 四楼非玩家角色 即将脱离预设活动区域
+        - 警告 猫房门未关 请防范未知生物入侵
+        - 警告 四楼防御塔已停机 猫咪大军即将出动
+        - 警告 门缝已开 黑暗中亮起了幾双发光的眼睛
+        - 警告 收起你的大意 四楼的猎食者要出笼了
+        - 警告 空间裂缝 已显现 请立即修复以阻止猫咪跨界
+        - 警告 四楼防护罩破裂 请准备迎接毛球冲击
+        - 警告 四楼 侦测到未授权的喵喵移动轨迹
+        - 警告 门户大开 四楼的统治者即将下凡视察
+    - repeat:
+        while:
+        - condition: state
+          entity_id: binary_sensor.isa_cn_blt_3_1hfd4n800k800_dw2hl_contact_state_p_2_2
+          state: 'on'
+        sequence:
+        - action: script.notify_router
+          data:
+            room: All
+            message: "{{ warning_msgs | random }}"
+        - action: text.set_value
+          target:
+            entity_id: text.xiaomi_cn_1151780439_hub1_emit_virtual_event_a_4_1
+          data:
+            value: 貓房門-未關上
+        - delay: 00:00:30
+    mode: restart

@@ -1,0 +1,183 @@
+automation:
+  - id: '1770382969591'
+    alias: 全屋-清晨/日出-排程
+    triggers:
+    - trigger: time
+      at: sensor.sun_next_dawn
+    - trigger: sun
+      event: sunrise
+    actions:
+    - action: automation.turn_on
+      target:
+        entity_id:
+        - automation.guang_bo_xia_yu_yu_ting_tong_zhi
+        - automation.ke_ting_hvaccan_shu_zhong_shu
+    - if:
+      - condition: state
+        entity_id: switch.xiaomi_cn_1111047276_pro1_on_p_2_1
+        state:
+        - 'off'
+      then:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.xiaomi_cn_1111047276_pro1_on_p_2_1
+    - if:
+      - condition: template
+        value_template: '{{ state_attr(''cover.xiaomi_cn_707179354_acn009_s_2_curtain'',''current_position'') | int < 35 }}'
+      then:
+      - action: cover.set_cover_position
+        data:
+          position: 65
+        target:
+          entity_id:
+          - cover.xiaomi_cn_707179354_acn009_s_2_curtain
+    - if:
+      - condition: state
+        entity_id: binary_sensor.isa_cn_blt_3_1gks22o60kk00_dw2hl_contact_state_p_2_2
+        state:
+        - 'off'
+      - condition: state
+        entity_id: climate.xiaomi_cn_930597336_rr0r00
+        state:
+        - 'off'
+      then:
+      - action: climate.turn_on
+        target:
+          entity_id: climate.xiaomi_cn_930597336_rr0r00
+    - if:
+      - condition: template
+        value_template: '{{ state_attr(''media_player.xiaomi_cn_1106002786_l17a'', ''volume_level'')| float != 0.55 }}'
+      then:
+      - action: media_player.volume_set
+        data:
+          volume_level: 0.55
+        target:
+          entity_id:
+          - media_player.xiaomi_cn_1106002786_l17a
+    - if:
+        - condition: state
+          entity_id: input_boolean.catroom_sleep
+          state:
+            - "off"
+      then:
+        - if:
+            - condition: template
+              value_template: >-
+                {{
+                state_attr('media_player.xiaomi_cn_1078830597_l17a','volume_level')|
+                float != 0.5 }}
+          then:
+            - action: media_player.volume_set
+              data:
+                volume_level: 0.5
+              target:
+                entity_id: media_player.xiaomi_cn_1078830597_l17a
+        - if:
+            - condition: template
+              value_template: >-
+                {{
+                state_attr('cover.xiaomi_cn_683774222_acn009_s_2_curtain','current_position')
+                | int < 35 }}
+          then:
+            - action: cover.set_cover_position
+              data:
+                position: 50
+              target:
+                entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
+    mode: single
+
+  - id: '1771575838160'
+    alias: 全屋-日落/黃昏-排程
+    triggers:
+    - trigger: sun
+      event: sunset
+    - trigger: time
+      at: sensor.sun_next_dusk
+    actions:
+    - if:
+      - condition: state
+        entity_id: light.yeelink_cn_648081925_ceiling20_s_2_light
+        state:
+        - 'off'
+      then:
+      - action: script.light_adjustable_mode
+        data:
+          entity_id: light.yeelink_cn_648081925_ceiling20_s_2_light
+    - if:
+      - condition: template
+        value_template: '{{ not is_state(''cover.xiaomi_cn_707179354_acn009_s_2_curtain'',''closed'')}}'
+      then:
+      - action: cover.close_cover
+        target:
+          entity_id: cover.xiaomi_cn_707179354_acn009_s_2_curtain
+    - if:
+      - condition: state
+        entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+        state:
+        - 'off'
+      then:
+      - action: script.light_adjustable_mode
+        data:
+          entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+    - if:
+      - condition: template
+        value_template: '{{ not is_state(''cover.xiaomi_cn_683774222_acn009_s_2_curtain'',''closed'')
+          }}'
+      then:
+      - action: cover.close_cover
+        target:
+          entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
+    mode: single
+
+  - id: '1770380159797'
+    alias: 全屋-宵禁(22點)-排程
+    triggers:
+    - trigger: time
+      at: "22:00:00"
+    - trigger: time
+      at: "22:30:00"
+    actions:
+    - action: automation.turn_off
+      target:
+        entity_id:
+        - automation.guang_bo_xia_yu_yu_ting_tong_zhi
+        - automation.ke_ting_hvaccan_shu_zhong_shu
+      data:
+        stop_actions: true
+    - if:
+      - condition: state
+        entity_id: switch.xiaomi_cn_1111047276_pro1_on_p_2_1
+        state:
+        - 'on'
+      then:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.xiaomi_cn_1111047276_pro1_on_p_2_1
+    - if:
+      - condition: template
+        value_template: '{{ state_attr(''media_player.xiaomi_cn_1078830597_l17a'', ''volume_level'')
+          | float != 0.20 }}'
+      then:
+      - action: media_player.volume_set
+        data:
+          volume_level: 0.2
+        target:
+          entity_id:
+          - media_player.xiaomi_cn_1078830597_l17a
+    - if:
+      - condition: template
+        value_template: '{{ state_attr(''media_player.xiaomi_cn_1106002786_l17a'', ''volume_level'')
+          | float != 0.20 }}'
+      then:
+      - action: media_player.volume_set
+        data:
+          volume_level: 0.2
+        target:
+          entity_id:
+          - media_player.xiaomi_cn_1106002786_l17a
+    - if: "{{ states('climate.xiaomi_cn_930597336_rr0r00') not in ['unavailable', 'unknown', 'off'] }}"
+      then:
+      - action: climate.turn_off
+        target:
+          entity_id: climate.xiaomi_cn_930597336_rr0r00
+    mode: single

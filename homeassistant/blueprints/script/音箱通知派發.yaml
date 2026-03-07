@@ -1,0 +1,28 @@
+blueprint:
+  name: 音箱通知派發
+  description: 訊息排隊播放，依長度自動計算延遲
+  domain: script
+  input:
+    text_entity:
+      name: 音箱通知實體
+      selector:
+        entity:
+          domain: text
+
+icon: "mdi:bell-alert"
+mode: queued
+max: 20
+
+fields:
+  message:
+    selector:
+      text:
+
+sequence:
+  - action: text.set_value
+    target:
+      entity_id: !input text_entity
+    data:
+      value: "{{ message }}"
+  - delay:
+      seconds: "{{ message|length*0.3 }}"

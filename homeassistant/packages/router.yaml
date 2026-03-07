@@ -1,0 +1,82 @@
+automation:
+  - id: '1769514254949'
+    alias: 全屋-米家中樞網關-虛擬事件-中樞
+    description: 路由米家虛擬事件，根據需求動態分配
+    mode: parallel
+    max: 50
+    triggers:
+      - trigger: state
+        entity_id: event.xiaomi_cn_1151780439_hub1_virtual_event_e_4_1
+        not_from:
+          - unknown
+          - unavailable
+        not_to:
+          - unknown
+          - unavailable
+    variables:
+      ev_name: "{{ trigger.to_state.attributes.get('事件名称', '') | trim }}"
+      event_to_target:
+        Zack-開鎖: input_datetime.zack_unlock
+        客廳-電視開關: script.livingroom_tv_toggle
+        4樓貓房-真值: input_button.catroom_true
+        4樓貓房-睡眠模式: script.catroom_sleep
+        4樓貓房-螢幕開關: script.catroom_screen_toggle
+      target_entity: "{{ event_to_target.get(ev_name, '') }}"
+    conditions:
+      - condition: template
+        value_template: "{{ target_entity != '' }}"
+    actions:
+      - choose:
+          - conditions: "{{ target_entity.startswith('script.') }}"
+            sequence:
+              - action: "{{ target_entity }}"
+          - conditions: "{{ target_entity.startswith('input_button.') }}"
+            sequence:
+              - action: input_button.press
+                target:
+                  entity_id: "{{ target_entity }}"
+          - conditions: "{{ target_entity == 'input_datetime.zack_unlock' }}"
+            sequence:
+              - condition: state
+                entity_id: input_boolean.zack_in_home
+                state: "off"
+              - action: input_datetime.set_datetime
+                target:
+                  entity_id: "{{ target_entity }}"
+                data:
+                  timestamp: "{{ now().timestamp() }}"
+
+script:
+  notify_router:
+    alias: 全屋-音箱通知-中樞
+    icon: "mdi:routes"
+    mode: parallel
+    max: 50
+    fields:
+      room:
+        description: "輸入All/客廳/客廳,4樓貓房"
+      message:
+        description: "播報內容"
+    variables:
+      mapping:
+        客廳: script.livingroom_notify
+        4樓貓房: script.catroom_notify
+      selected_rooms: >
+        {% set r = room | default('None') | string %}
+        {{ mapping.keys() | list if r == 'All' else r.split(',') | map('trim') | unique | select('ne', '') | list }}
+    sequence:
+      - condition: template
+        value_template: "{{ message | default('') | trim | bool(false) or message | length > 0 }}"
+      - repeat:
+          for_each: "{{ selected_rooms }}"
+          sequence:
+            - if: "{{ repeat.item in mapping }}"
+              then:
+                - action: "{{ mapping[repeat.item] }}"
+                  data:
+                    message: "{{ message }}"
+              else:
+                - action: persistent_notification.create
+                  data:
+                    title: 音箱通知派發-未分配-{{ repeat.item }}
+                    message: 原本播報內容:{{ message }}
