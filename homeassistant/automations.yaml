@@ -1,0 +1,70 @@
+- id: '1770530454623'
+  alias: 全屋-HVAC模式-監控
+  use_blueprint:
+    path: 全屋-HVAC模式-監控.yaml
+    input:
+      climates:
+      - climate.xiaomi_cn_553562745_c24
+      - climate.xiaomi_cn_930597336_rr0r00
+      global_sensors:
+      - sensor.miaomiaoc_cn_blt_3_1jq264sa44c04_t9_temperature_p_3_1001
+- id: '1769912502670'
+  alias: 全屋-超半小時自動關(保底關燈)-監控
+  use_blueprint:
+    path: 全屋-超X小時自動關(保底關燈)-監控.yaml
+    input:
+      target_entities:
+      - switch.xiaomi_cn_1110894493_pro3_on_p_3_1
+      - switch.xiaomi_cn_1110894493_pro3_on_p_4_1
+      - switch.xiaomi_cn_1110466850_pro3_on_p_2_1
+      - switch.xiaomi_cn_1102979135_pro3_on_p_4_1
+      - switch.xiaomi_cn_1110466749_pro3_on_p_2_1
+      - switch.xiaomi_cn_1110466749_pro3_on_p_3_1
+      - switch.xiaomi_cn_1110466749_pro3_on_p_4_1
+      - switch.xiaomi_cn_1103292876_pro3_on_p_2_1
+      - switch.xiaomi_cn_1133595682_pro2_on_p_3_1
+      - switch.xiaomi_cn_1103292876_pro3_on_p_3_1
+      - switch.xiaomi_cn_1132111962_pro2_on_p_3_1
+      - switch.xiaomi_cn_1110894493_pro3_on_p_2_1
+      - switch.xiaomi_cn_1103292876_pro3_on_p_4_1
+      - switch.xiaomi_cn_1133595682_pro2_on_p_2_1
+- id: '1769890598739'
+  alias: 全屋-超2小時自動關(保底關燈)-監控
+  use_blueprint:
+    path: 全屋-超X小時自動關(保底關燈)-監控.yaml
+    input:
+      target_entities:
+      - switch.xiaomi_cn_1102979135_pro3_on_p_3_1
+      - switch.xiaomi_cn_1110466850_pro3_on_p_3_1
+      timeout_minutes: 120
+- id: '1770285771865'
+  alias: 全屋-30秒無人自動關燈-監控
+  use_blueprint:
+    path: 全屋-X秒無人自動關燈-監控.yaml
+    input:
+      target_entities:
+      - switch.xiaomi_cn_1082911602_pro2_on_p_3_1
+      - switch.xiaomi_cn_1110894493_pro3_on_p_3_1
+      - switch.xiaomi_cn_1110894493_pro3_on_p_4_1
+- id: '1770286367069'
+  alias: 全屋-60秒無人自動關燈-監控
+  use_blueprint:
+    path: 全屋-X秒無人自動關燈-監控.yaml
+    input:
+      min_on_seconds: 60
+      target_entities:
+      - switch.xiaomi_cn_1110466850_pro3_on_p_3_1
+      - switch.xiaomi_cn_1102979135_pro3_on_p_3_1
+      - switch.xiaomi_cn_1103292876_pro3_on_p_3_1
+- id: '1769924290981'
+  alias: 客廳-掃拖機器人-剩餘電量-通知
+  use_blueprint:
+    path: 掃拖機器人-剩餘電量-通知.yaml
+    input:
+      vacuum_entity: vacuum.xiaomi_cn_1062335964_c102cn
+- id: '1769924187219'
+  alias: 4樓貓房-掃拖機器人-剩餘電量-通知
+  use_blueprint:
+    path: 掃拖機器人-剩餘電量-通知.yaml
+    input:
+      vacuum_entity: vacuum.xiaomi_cn_1142144467_d110ch

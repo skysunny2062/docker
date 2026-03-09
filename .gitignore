@@ -1,0 +1,13 @@
+adguardhome/data
+adguardhome/AdGuardHome.yaml
+homeassistant/.cloud/
+homeassistant/.storage/
+homeassistant/backups/
+homeassistant/image/
+homeassistant/Nmap/
+homeassistant/.ha_run.lock
+homeassistant/home-assistant.log*
+homeassistant/home-assistant_v2.db*
+homeassistant/home-assistant_v2.db-*
+homeassistant/secrets.yaml
+*.pyc

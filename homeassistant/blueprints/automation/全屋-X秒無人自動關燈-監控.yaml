@@ -1,0 +1,68 @@
+blueprint:
+  name: 全屋-X秒無人自動關燈-監控
+  description: 政策型藍圖-無人即關
+  domain: automation
+  input:
+    target_entities:
+      name: 目標燈(多選)
+      selector:
+        entity: { multiple: true, filter: [{domain: light}, {domain: switch}] }
+    min_on_seconds:
+      name: 保底開燈時長(秒)
+      default: 30
+      selector:
+        number: { min: 0, max: 300, step: 1, mode: box, unit_of_measurement: 秒 }
+
+mode: parallel
+max: 100
+
+trigger:
+  - platform: state
+    entity_id: !input target_entities
+    to: "on"
+
+action:
+  - variables:
+      ent: "{{ trigger.entity_id }}"
+      ent_name: "{{ state_attr(ent, 'friendly_name') | default(ent, true) }}"
+      area: "{{ area_name(ent) | default('未知區域', true) }}" 
+      parts: "{{ ent_name.split('  ') }}"
+      sub_name: "{{ (parts[1] if parts | length > 1 else ent_name) | regex_replace(' (左键|中键|右键|防闪烁模式)', '') | trim }}"
+      target_sensor_name: "{{ sub_name }}-人在傳感器"
+      area_sensors: >-
+        {{ area_entities(area) | select('match', '^binary_sensor\\.') | select('is_state_attr', 'device_class', 'occupancy') | list }}
+      exact_match: >-
+        {% set ns = namespace(found='') %}
+        {% for sid in area_sensors if not ns.found %}
+          {% if target_sensor_name in (state_attr(sid, 'friendly_name') | string) ~ (device_attr(sid, 'name') | string) %}
+            {% set ns.found = sid %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.found }}
+      sensor_entity: "{{ exact_match or (area_sensors[0] if area_sensors | length == 1 else '') }}"
+      alert_msg: >-
+        {% if not sensor_entity %}需要:{{ target_sensor_name }}
+        {% elif not exact_match %}目前採用:{{ (state_attr(sensor_entity, 'friendly_name') | string).split(' ')[0] }}
+        {% endif %}
+  - if: "{{ alert_msg | trim != '' }}"
+    then:
+      - action: persistent_notification.create
+        data:
+          title: "無人自動關-{{ area }} {{ sub_name }}"
+          message: "感測器不存在 {{ alert_msg }}"
+  - if: "{{ sensor_entity | trim == '' }}"
+    then:
+      - stop: "找不到可用感測器"
+  - wait_template: "{{ is_state(ent, 'off') }}"
+    timeout: !input min_on_seconds
+    continue_on_timeout: true
+  - condition: "{{ is_state(ent, 'on') }}"
+  - if: "{{ is_state(sensor_entity, 'on') }}"
+    then:
+      - wait_template: "{{ is_state(sensor_entity, 'off') or is_state(ent, 'off') }}"
+        timeout: 02:30:00
+        continue_on_timeout: false
+  - condition: "{{ is_state(ent, 'on') }}"
+  - action: homeassistant.turn_off
+    target:
+      entity_id: "{{ ent }}"

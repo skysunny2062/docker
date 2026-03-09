@@ -1,0 +1,135 @@
+blueprint:
+  name: 全屋-超X小時自動關(保底關燈)-監控
+  description: 政策型藍圖-設備開啟即啟動計時，超時自動關並發音箱播報\n 注意：請務必為每個設備建立對應的Timer
+  domain: automation
+  input:
+    target_entities:
+      name: 目標設備(多選)
+      selector: { entity: { multiple: true, filter: [{domain: light}, {domain: switch}] } }
+    timeout_minutes:
+      name: 保底關閉時間(分鐘)
+      description: "支援小數，如：0.5=30秒、120=2小時。"
+      default: 30
+      selector: { number: { min: 0.1, max: 1440, step: 0.1, mode: box, unit_of_measurement: min } }
+    notify_mode:
+      name: 通知模式
+      description: "All=全屋 / Silent=靜音 / Custom=指定房間 (留空取設備分區)"
+      default: All
+      selector: { select: { options: ["All", "Custom", "Silent"] } }
+    custom_rooms:
+      description: "多房間請用逗號分隔 (例: 客廳,貓房)"
+      name: Custom 模式房間名
+      default: ""
+      selector: { text: {} }
+
+mode: parallel
+max: 100
+
+trigger:
+  - platform: homeassistant
+    event: start
+    id: ha_start
+  - platform: state
+    entity_id: !input target_entities
+    to: "on"
+    id: device_on
+  - platform: state
+    entity_id: !input target_entities
+    to: "off"
+    id: device_off
+  - platform: event
+    event_type: timer.finished
+    id: timer_done
+
+variables:
+  targets: !input target_entities
+  timeout_min: !input timeout_minutes
+  notify_mode: !input notify_mode
+  custom_rooms: !input custom_rooms
+  timeout_sec: "{{ [((timeout_min | float(0)) * 60) | round(0) | int, 2] | max }}"
+
+action:
+  - choose:
+      # 分支 1：HA 重啟 (掃描接應)
+      - conditions: "{{ trigger.id == 'ha_start' }}"
+        sequence:
+          - delay: 00:00:30
+          - repeat:
+              for_each: "{{ targets }}"
+              sequence:
+                - delay: 00:00:01
+                - variables:
+                    ent: "{{ repeat.item }}"
+                    timer_ent: "timer.{{ ent | replace('.','_') }}"
+                - choose:
+                    - conditions: "{{ states(timer_ent) in ['unknown','unavailable'] }}"
+                      sequence:
+                        - action: persistent_notification.create
+                          data:
+                            title: "超時自動關-缺少Timer-{{ area_name(ent) or '未分區' }}"
+                            message: "請建立timer: {{ ent }}"
+                  default:
+                    - condition: "{{ states(ent) != 'off' and states(timer_ent) == 'idle' }}"
+                    - action: timer.start
+                      target: { entity_id: "{{ timer_ent }}" }
+                      data: { duration: "{{ timeout_sec }}" }
+      # 分支 2：狀態變化 (ON / OFF)
+      - conditions: "{{ trigger.id in ['device_on', 'device_off'] }}"
+        sequence:
+          - variables:
+              ent: "{{ trigger.entity_id }}"
+              timer_ent: "timer.{{ ent | replace('.','_') }}"
+          - choose:
+              - conditions: "{{ states(timer_ent) in ['unknown','unavailable'] }}"
+                sequence:
+                  - action: persistent_notification.create
+                    data:
+                      title: "超時自動關-缺少Timer-{{ area_name(ent) or '未分區' }}"
+                      message: "請建立timer: {{ ent }}"
+                  - stop: "缺少Timer"
+          - choose:
+              - conditions: "{{ trigger.id == 'device_on' and states(timer_ent) == 'idle' }}"
+                sequence:
+                  - action: timer.start
+                    target: { entity_id: "{{ timer_ent }}" }
+                    data: { duration: "{{ timeout_sec }}" }
+              - conditions: "{{ trigger.id == 'device_off' }}"
+                sequence:
+                  - action: timer.cancel
+                    target: { entity_id: "{{ timer_ent }}" }
+                  - stop: "設備已關閉"
+      # 分支 3：計時結束 (收尾)
+      - conditions: "{{ trigger.id == 'timer_done' }}"
+        sequence:
+          - variables:
+              timer_ent: "{{ trigger.event.data.entity_id | default('') }}"
+              ent: "{{ timer_ent[6:] | replace('_','.', 1) if timer_ent.startswith('timer.') else '' }}"
+          - condition: "{{ ent | length > 0 and ent in targets and states(ent) != 'off' }}"
+          - variables:
+              t_txt: >-
+                {% set s = timeout_sec | int %}
+                {{ s ~ '秒' if s < 60 else (s/60)|round(1)|string|replace('.0','') ~ '分' if s < 3600 else (s/3600)|round(1)|string|replace('.0','') ~ '小時' }}
+              timer_name: "{{ state_attr(timer_ent, 'friendly_name') | default(timer_ent, true) }}"
+              timer_area: "{{ area_name(timer_ent) | default('', true) }}"
+              label: "{{ (timer_area ~ timer_name) | replace('(','') | replace(')','') }}"
+              room: "{{ (custom_rooms | trim or area_name(ent) | default('', true)) if notify_mode == 'Custom' else notify_mode }}"
+          - choose:
+              - conditions: "{{ states(ent) not in ['unknown','unavailable'] }}"
+                sequence:
+                  - action: homeassistant.turn_off
+                    target: { entity_id: "{{ ent }}" }
+                  - wait_template: "{{ is_state(ent, 'off') }}"
+                    timeout: 00:00:10
+          - variables:
+              fail: "{{ states(ent) != 'off' }}"
+              n_msg: "{{ label }} {{ '異常 ' ~ label ~ ' 異常' if fail else '已開' ~ t_txt ~ ' 自動關閉' }}"
+          - action: persistent_notification.create
+            data:
+              title: "超時自動關-{{ '失敗-' if fail }}{{ label }}"
+              message: "已開{{ t_txt }}"
+          - if: "{{ notify_mode != 'Silent' }}"
+            then:
+              - action: script.notify_router
+                data:
+                  room: "{{ room }}"
+                  message: "{{ n_msg }}"

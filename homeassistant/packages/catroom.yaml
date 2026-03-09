@@ -1,0 +1,321 @@
+input_boolean:
+  catroom_sleep:
+    name: "4樓貓房-睡眠"
+
+input_button:
+  catroom_true:
+    name: "4樓貓房-真值"
+
+automation:
+  - id: '1771518494419'
+    alias: 4樓貓房-睡眠模式-中樞
+    description: 整合睡眠與早安模式
+    triggers:
+    - trigger: state
+      entity_id: event.xiaomi_cn_1082911602_pro2_double_click_e_4_2
+      not_to:
+      - unknown
+      - unavailable
+      not_from:
+      - unknown
+      - unavailable
+    - trigger: state
+      entity_id: vacuum.xiaomi_cn_1142144467_d110ch
+      from: docked
+      to: cleaning
+    - trigger: state
+      entity_id:
+      - input_boolean.zack_in_home
+      to:
+      - 'off'
+      for: 00:00:20
+    actions:
+    - condition: template
+      value_template: '{{ trigger.entity_id.startswith(''event'') or is_state(''input_boolean.catroom_sleep'',''on'') }}'
+    - action: script.catroom_sleep
+    mode: single
+
+  - id: '1771810491829'
+    alias: 4樓貓房-睡眠-監控
+    triggers:
+    - trigger: state
+      entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_3_1
+      from: 'off'
+      to: 'on'
+      for: 00:01:00
+      id: wc
+    - entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_3_1
+      from: 'on'
+      to: 'off'
+      for: 00:01:00
+      id: wc_leave
+      trigger: state
+    actions:
+    - choose:
+      - conditions:
+        - condition: trigger
+          id: wc
+        sequence:
+        - action: script.light_adjustable_mode
+          data:
+            entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+      - conditions:
+        - condition: trigger
+          id: wc_leave
+        sequence:
+        - action: light.turn_off
+          target:
+            entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+    mode: parallel
+    max: 10
+
+  - id: '1770569430713'
+    alias: 4樓貓房-HVAC參數-中樞
+    description: 派發參數1.出門維持2分鐘(1+1) 2.在家維持2分鐘(1+1) 3.空調模式變更過1分
+    triggers:
+    - trigger: state
+      entity_id: climate.xiaomi_cn_553562745_c24
+      not_to:
+      - 'off'
+      - unavailable
+      - unknown
+    - trigger: state
+      entity_id:
+      - input_boolean.zack_in_home
+      to:
+      - 'on'
+      - 'off'
+      for: 00:01:00
+    actions:
+    - action: script.catroom_hvac_policy
+    mode: single
+
+  - id: '1772339524270'
+    alias: 4樓貓房-浴室排氣扇-監控
+    triggers:
+    - trigger: state
+      entity_id:
+      - switch.xiaomi_cn_1082911602_pro2_on_p_3_1
+      to:
+      - 'on'
+      for: 00:02:00
+    conditions:
+    - condition: state
+      entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_2_1
+      state:
+      - 'off'
+    actions:
+    - action: switch.turn_on
+      target:
+        entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_2_1
+    mode: single
+
+script:
+  catroom_sleep:
+    alias: 4樓貓房-睡眠模式
+    icon: mdi:security
+    description: 整合睡眠與早安模式的執行邏輯
+    mode: restart
+    sequence:
+    - action: input_boolean.toggle
+      target:
+        entity_id: input_boolean.catroom_sleep
+    - choose:
+      - conditions:
+        - condition: state
+          entity_id: input_boolean.catroom_sleep
+          state: "on"
+        sequence:
+        - if:
+          - condition: template
+            value_template: "{{ state_attr('media_player.xiaomi_cn_1078830597_l17a','volume_level') | float != 0.2 }}"
+          then:
+          - action: media_player.volume_set
+            data:
+              volume_level: 0.2
+            target:
+              entity_id: media_player.xiaomi_cn_1078830597_l17a
+        - action: select.select_option
+          target:
+            entity_id: select.xiaomi_cn_683774222_acn009_speed_level_p_2_8
+          data:
+            option: 低速
+        - action: text.set_value
+          target:
+            entity_id: text.xiaomi_cn_1151780439_hub1_emit_virtual_event_a_4_1
+          data:
+            value: 4樓貓房-睡覺
+        - action: script.notify_router
+          data:
+            room: 4樓貓房
+            message: 晚安
+        - delay: 00:00:30
+        - if:
+          - condition: template
+            value_template: "{{ not is_state('cover.xiaomi_cn_683774222_acn009_s_2_curtain','closed') }}"
+          then:
+          - action: cover.close_cover
+            target:
+              entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
+        - action: switch.turn_off
+          target:
+            entity_id:
+            - switch.cuco_cn_845936503_v3_on_p_2_1
+            - switch.xiaomi_cn_553562745_c24_alarm_p_5_1
+        - action: light.turn_off
+          target:
+            entity_id:
+            - light.xiaomi_cn_1082911602_pro2_s_7_indicator_light
+            - light.chuangmi_cn_1052611228_021a04_s_3_indicator_light
+            - light.yeelink_cn_647553605_ceiling20_s_2_light
+        - action: light.turn_on
+          target:
+            entity_id: light.xiaomi_cn_553562745_c24_s_6_indicator_light
+          data:
+            effect: Auto
+        - action: automation.turn_on
+          target:
+            entity_id: automation.4lou_mao_fang_shui_mian_jian_kong
+      - conditions:
+        - condition: state
+          entity_id: input_boolean.catroom_sleep
+          state: "off"
+        sequence:
+        - action: select.select_option
+          target:
+            entity_id: select.xiaomi_cn_683774222_acn009_speed_level_p_2_8
+          data:
+            option: 高速
+        - if:
+          - condition: state
+            entity_id: sun.sun
+            state:
+            - above_horizon
+          then:
+          - if:
+            - condition: template
+              value_template: "{{ state_attr('media_player.xiaomi_cn_1078830597_l17a','volume_level')| float != 0.5 }}"
+            then:
+            - action: media_player.volume_set
+              data:
+                volume_level: 0.5
+              target:
+                entity_id: media_player.xiaomi_cn_1078830597_l17a
+          - if:
+            - condition: template
+              value_template: "{{ state_attr('cover.xiaomi_cn_683774222_acn009_s_2_curtain','current_position') | int < 35 }}"
+            then:
+            - action: cover.set_cover_position
+              data:
+                position: 50
+              target:
+                entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
+          else:
+          - if:
+            - condition: state
+              entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+              state:
+                - "off"
+            then:
+            - action: script.light_adjustable_mode
+              data:
+                entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
+        - action: text.set_value
+          target:
+            entity_id: text.xiaomi_cn_1151780439_hub1_emit_virtual_event_a_4_1
+          data:
+            value: 4樓貓房-起床
+        - action: light.turn_on
+          target:
+            entity_id: light.xiaomi_cn_553562745_c24_s_6_indicator_light
+          data:
+            effect: High
+        - action: light.turn_on
+          target:
+            entity_id:
+            - light.xiaomi_cn_1082911602_pro2_s_7_indicator_light
+            - light.chuangmi_cn_1052611228_021a04_s_3_indicator_light
+        - action: switch.turn_on
+          target:
+            entity_id:
+            - switch.xiaomi_cn_553562745_c24_alarm_p_5_1
+        - action: script.notify_router
+          data:
+            room: 4樓貓房
+            message: 早安
+        - action: automation.turn_off
+          target:
+            entity_id: automation.4lou_mao_fang_shui_mian_jian_kong
+          data:
+            stop_actions: true
+
+  catroom_hvac_policy:
+    alias: 4樓貓房-HVAC
+    icon: "mdi:security"
+    mode: restart
+    variables:
+      c: climate.xiaomi_cn_553562745_c24
+      air_fresh: fan.xiaomi_cn_553562745_c24_s_14_air_fresh
+      eco_sw: switch.xiaomi_cn_553562745_c24_eco_p_2_7
+      heater_sw: switch.xiaomi_cn_553562745_c24_heater_p_2_9
+      windfeel_sel: select.xiaomi_cn_553562745_c24_vertical_angle_p_3_6
+      occ_cool_t: 27.5
+      occ_heat_t: 22.5
+      occ_air_pct: 50
+      vac_cool_t: 28
+      vac_heat_t: 21
+      vac_air_pct: 33
+    sequence:
+      - delay: 00:01:00
+      - condition: template
+        value_template: "{{ states(c) not in ['off', 'unavailable', 'unknown'] }}"
+      - variables:
+          is_occupied: "{{ is_state('input_boolean.zack_in_home', 'on') }}"
+          hvac_mode: "{{ states(c) }}"
+          target_temp: >-
+            {% if hvac_mode == 'cool' %} {{ occ_cool_t if is_occupied else vac_cool_t }}
+            {% elif hvac_mode == 'heat' %} {{ occ_heat_t if is_occupied else vac_heat_t }}
+            {% else %} {{ state_attr(c, 'temperature') }} {% endif %}
+          target_windfeel: "{{ '下吹风' if hvac_mode == 'heat' else '上吹风' }}"
+          target_fm: >-
+            {% if hvac_mode == 'fan_only' %} 三挡
+            {% elif hvac_mode == 'heat' %} 自动
+            {% else %} {{ state_attr(c, 'fan_mode') }} {% endif %}
+          target_air_pct: "{{ occ_air_pct if is_occupied else vac_air_pct }}"
+      - if: "{{ is_state(air_fresh, 'off') }}"
+        then:
+          - action: fan.turn_on
+            target: { entity_id: "{{ air_fresh }}" }
+      - if: "{{ state_attr(c, 'swing_mode') != 'horizontal' }}"
+        then:
+          - action: climate.set_swing_mode
+            target: { entity_id: "{{ c }}" }
+            data: { swing_mode: "horizontal" }
+      - if: "{{ state_attr(c, 'temperature') != target_temp }}"
+        then:
+          - action: climate.set_temperature
+            target: { entity_id: "{{ c }}" }
+            data: { temperature: "{{ target_temp }}" }
+      - if: "{{ hvac_mode in ['heat', 'cool'] and is_state(eco_sw, 'off') }}"
+        then:
+          - action: switch.turn_on
+            target: { entity_id: "{{ eco_sw }}" }
+      - if: "{{ hvac_mode == 'heat' and is_state(heater_sw, 'on') }}"
+        then:
+          - action: switch.turn_off
+            target: { entity_id: "{{ heater_sw }}" }
+      - if: "{{ states(windfeel_sel) != target_windfeel }}"
+        then:
+          - action: select.select_option
+            target: { entity_id: "{{ windfeel_sel }}" }
+            data: { option: "{{ target_windfeel }}" }
+      - if: "{{ state_attr(c, 'fan_mode') != target_fm }}"
+        then:
+          - action: climate.set_fan_mode
+            target: { entity_id: "{{ c }}" }
+            data: { fan_mode: "{{ target_fm }}" }
+      - if: "{{ state_attr(air_fresh, 'percentage') != target_air_pct }}"
+        then:
+          - action: fan.set_percentage
+            target: { entity_id: "{{ air_fresh }}" }
+            data: { percentage: "{{ target_air_pct }}" }

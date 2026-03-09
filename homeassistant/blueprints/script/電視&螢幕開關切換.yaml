@@ -1,0 +1,67 @@
+blueprint:
+  name: 電視/螢幕開關切換
+  description: 整合開關執行與狀態驗證，失敗時自動播報。
+  domain: script
+  input:
+    media_player_entity:
+      name: 電視/螢幕裝置
+      selector:
+        entity:
+          domain: media_player
+    display_name:
+      name: 播報名稱
+      selector:
+        select:
+          options:
+            - 電視
+            - 螢幕
+
+icon: "mdi:television"
+mode: single
+
+variables:
+  mp: !input media_player_entity
+  name: !input display_name
+  rmt: "{{ mp | replace('media_player.', 'remote.') }}"
+  notify_mode: "{{ notify_mode | default('Normal') }}"
+  off_states: ['off', 'standby', 'unavailable', 'unknown']
+  room_name: "{{ area_name(mp) | default('') }}"
+  should_notify: "{{ (notify_mode != 'Silent') and (room_name != '') }}"
+
+sequence:
+  # 1. 前置保險：檢查在不在線
+  - if:
+      - condition: template
+        value_template: "{{ is_state(mp, 'unavailable') or is_state(mp, 'unknown') }}"
+    then:
+      - if: "{{ should_notify }}"
+        then:
+          - action: script.notify_router
+            data:
+              room: "{{ room_name }}"
+              message: "{{ name }}無響應"
+      - stop: "設備實體不可用，中斷任務"
+  # 2. 擷取當前狀態快照
+  - variables:
+      is_off: "{{ states(mp) in off_states }}"
+  # 3. 執行動作 (如果是關的就開，開的就關)
+  - action: "remote.turn_{{ 'on' if is_off else 'off' }}"
+    target:
+      entity_id: "{{ rmt }}"
+  # 4. 等待狀態翻轉
+  - wait_template: >-
+      {% if is_off %}
+        {{ states(mp) not in off_states }}
+      {% else %}
+        {{ states(mp) in off_states }}
+      {% endif %}
+    timeout: 00:00:12
+  # 5. 失敗後的通知
+  - if:
+      - condition: template
+        value_template: "{{ not wait.completed and should_notify }}"
+    then:
+      - action: script.notify_router
+        data:
+          room: "{{ room_name }}"
+          message: "{{ name }}無響應"
