@@ -334,8 +334,7 @@ script:
                 entity_id: light.yeelink_cn_647553605_ceiling20_s_2_light
         - if:
           - condition: template
-            value_template: '{{ states(''media_player.4lou_mao_fang_de_dian_shi_2'')
-              not in [''off'',''standby'',''unknown'',''unavailable''] }}'
+            value_template: '{{ states(''media_player.4lou_mao_fang_de_dian_shi_2'') not in [''off'',''standby'',''unknown'',''unavailable''] }}'
           then:
           - action: script.catroom_screen_toggle
             data:

@@ -12,6 +12,12 @@ automation:
         entity_id:
         - automation.guang_bo_xia_yu_yu_ting_tong_zhi
         - automation.ke_ting_hvaccan_shu_zhong_shu
+    - action: cover.set_cover_position
+      data:
+        position: 65
+      target:
+        entity_id:
+        - cover.xiaomi_cn_707179354_acn009_s_2_curtain
     - if:
       - condition: state
         entity_id: switch.xiaomi_cn_1111047276_pro1_on_p_2_1
@@ -21,16 +27,6 @@ automation:
       - action: switch.turn_on
         target:
           entity_id: switch.xiaomi_cn_1111047276_pro1_on_p_2_1
-    - if:
-      - condition: template
-        value_template: '{{ state_attr(''cover.xiaomi_cn_707179354_acn009_s_2_curtain'',''current_position'') | int < 35 }}'
-      then:
-      - action: cover.set_cover_position
-        data:
-          position: 65
-        target:
-          entity_id:
-          - cover.xiaomi_cn_707179354_acn009_s_2_curtain
     - if:
       - condition: state
         entity_id: binary_sensor.isa_cn_blt_3_1gks22o60kk00_dw2hl_contact_state_p_2_2
@@ -60,6 +56,11 @@ automation:
           state:
             - "off"
       then:
+        - action: cover.set_cover_position
+          data:
+            position: 50
+          target:
+            entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
         - if:
             - condition: template
               value_template: >-
@@ -72,18 +73,6 @@ automation:
                 volume_level: 0.5
               target:
                 entity_id: media_player.xiaomi_cn_1078830597_l17a
-        - if:
-            - condition: template
-              value_template: >-
-                {{
-                state_attr('cover.xiaomi_cn_683774222_acn009_s_2_curtain','current_position')
-                | int < 35 }}
-          then:
-            - action: cover.set_cover_position
-              data:
-                position: 50
-              target:
-                entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
     mode: single
 
   - id: '1771575838160'

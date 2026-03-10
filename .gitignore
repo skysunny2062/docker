@@ -1,5 +1,6 @@
 adguardhome/data
 adguardhome/AdGuardHome.yaml
+homeassistant/.cache/
 homeassistant/.cloud/
 homeassistant/.storage/
 homeassistant/backups/

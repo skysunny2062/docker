@@ -201,15 +201,11 @@ script:
                 volume_level: 0.5
               target:
                 entity_id: media_player.xiaomi_cn_1078830597_l17a
-          - if:
-            - condition: template
-              value_template: "{{ state_attr('cover.xiaomi_cn_683774222_acn009_s_2_curtain','current_position') | int < 35 }}"
-            then:
-            - action: cover.set_cover_position
-              data:
-                position: 50
-              target:
-                entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
+          - action: cover.set_cover_position
+            data:
+              position: 50
+            target:
+              entity_id: cover.xiaomi_cn_683774222_acn009_s_2_curtain
           else:
           - if:
             - condition: state
