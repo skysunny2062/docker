@@ -119,7 +119,7 @@ automation:
       - 'off'
     actions:
     - action: script.livingroom_hvac_policy
-    mode: single
+    mode: restart
 
 script:
   livingroom_hvac_policy:

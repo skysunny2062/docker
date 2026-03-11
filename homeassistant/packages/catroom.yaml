@@ -88,7 +88,7 @@ automation:
       for: 00:01:00
     actions:
     - action: script.catroom_hvac_policy
-    mode: single
+    mode: restart
 
   - id: '1772339524270'
     alias: 4樓貓房-浴室排氣扇-監控
