@@ -25,20 +25,17 @@ action:
   - variables:
       ent: "{{ trigger.entity_id }}"
       ent_name: "{{ state_attr(ent, 'friendly_name') | default(ent, true) }}"
-      area: "{{ area_name(ent) | default('未知區域', true) }}" 
+      area: "{{ area_name(ent) | default('未知區域', true) }}"
       parts: "{{ ent_name.split('  ') }}"
       sub_name: "{{ (parts[1] if parts | length > 1 else ent_name) | regex_replace(' (左键|中键|右键|防闪烁模式)', '') | trim }}"
       target_sensor_name: "{{ sub_name }}-人在傳感器"
       area_sensors: >-
         {{ area_entities(area) | select('match', '^binary_sensor\\.') | select('is_state_attr', 'device_class', 'occupancy') | list }}
       exact_match: >-
-        {% set ns = namespace(found='') %}
-        {% for sid in area_sensors if not ns.found %}
-          {% if target_sensor_name in (state_attr(sid, 'friendly_name') | string) ~ (device_attr(sid, 'name') | string) %}
-            {% set ns.found = sid %}
-          {% endif %}
-        {% endfor %}
-        {{ ns.found }}
+        {{ expand(area_sensors)
+           | selectattr('attributes.friendly_name', 'search', target_sensor_name)
+           | map(attribute='entity_id')
+           | first | default('') }}
       sensor_entity: "{{ exact_match or (area_sensors[0] if area_sensors | length == 1 else '') }}"
       alert_msg: >-
         {% if not sensor_entity %}需要:{{ target_sensor_name }}
