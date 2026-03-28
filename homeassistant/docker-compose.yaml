@@ -11,29 +11,6 @@ services:
     volumes:
       - .:/config
 
-  nmap:
-    image: instrumentisto/nmap:latest
-    container_name: Nmap
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - TZ=Asia/Taipei
-    volumes:
-      - ./Nmap:/data
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        sleep 120
-        while true; do
-          if nmap -sn -PR 192.168.0.141 | grep -q "192.168.0.141"; then
-            printf 1 > /data/zack_present
-          else
-            printf 0 > /data/zack_present
-          fi
-          sleep 300
-        done
-
 networks:
   vlan107:
     external: true

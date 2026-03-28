@@ -8,15 +8,6 @@ input_boolean:
   zack_in_home:
     name: "Zack-在家"
 
-command_line:
-  - binary_sensor:
-      name: "zack_phone_nearby"
-      command: "cat /config/Nmap/zack_present"
-      payload_on: "1"
-      payload_off: "0"
-      scan_interval: 60
-      device_class: connectivity
-
 automation:
   - id: '1771750044190'
     alias: Zack-出門-監控
@@ -125,7 +116,7 @@ automation:
         is_sleep: '{{ trigger.entity_id == ''input_boolean.catroom_sleep'' }}'
         unlock_ts: '{{ state_attr(''input_datetime.zack_unlock'',''timestamp'') | int(0) }}'
         is_recent_unlock: '{{ (now().timestamp() - unlock_ts) < 1800 }}'
-        phone_nearby: '{{ is_state(''binary_sensor.zack_phone_nearby'', ''on'') }}'
+        phone_nearby: '{{ is_state(''binary_sensor.zack_phone'', ''on'') }}'
     - choose:
       - conditions:
         - condition: template
