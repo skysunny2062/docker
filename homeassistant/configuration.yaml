@@ -1,0 +1,14 @@
+# 載入基本整合
+default_config:
+
+# 載入前端主題
+frontend:
+  themes: !include_dir_merge_named themes
+
+# Automation / Script / Scene
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+homeassistant:
+  packages: !include_dir_named packages/

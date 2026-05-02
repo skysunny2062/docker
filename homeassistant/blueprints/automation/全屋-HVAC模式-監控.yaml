@@ -1,0 +1,108 @@
+blueprint:
+  name: 全屋-HVAC模式-監控
+  description: 政策型藍圖-依全域與房間感測器自動切換HVAC模式
+  domain: automation
+  input:
+    climates:
+      name: HVAC(多選)
+      selector:
+        entity: { domain: climate, multiple: true }
+    global_sensors:
+      name: 全域參照溫度感測器(多選)
+      selector:
+        entity: { domain: sensor, device_class: temperature, multiple: true }
+    c_on:
+      name: 冷氣開啟
+      default: 28.5
+      selector: &temp_selector
+        number: { min: 18, max: 32, step: 0.5 }
+    c_off:
+      name: 冷氣關閉
+      default: 27.0
+      selector: *temp_selector
+    h_on:
+      name: 暖氣開啟
+      default: 22.5
+      selector: *temp_selector
+    h_off:
+      name: 暖氣關閉
+      default: 23.5
+      selector: *temp_selector
+
+mode: queued
+max: 10
+
+trigger:
+  - platform: time_pattern
+    minutes: "0"
+  - platform: state
+    entity_id: !input climates
+    from: "off"
+    not_to: [unknown, unavailable]
+
+variables:
+  climates: !input climates
+  global_sensors: !input global_sensors
+  climate: "{{ [trigger.entity_id] if trigger.platform == 'state' else climates }}"
+  c_on: !input c_on
+  c_off: !input c_off
+  h_on: !input h_on
+  h_off: !input h_off
+  T_ref: >-
+    {% set vals = expand(global_sensors) | map(attribute='state') | select('is_number') | map('float') | list %}
+    {{ (vals | average)|round(2) if vals else none }}
+
+action:
+  - repeat:
+      for_each: "{{ climate }}"
+      sequence:
+        - variables:
+            c: "{{ repeat.item }}"
+            hvac: "{{ states(c) }}"
+        - condition: template
+          value_template: "{{ hvac not in ['off','unknown','unavailable'] }}"
+        - variables:
+            area: "{{ area_name(c) }}"
+            room_sensors: >
+              {{ expand(area_entities(area) | select('match','^sensor\\.')) 
+                | selectattr('attributes.device_class','eq','temperature') 
+                | selectattr('name','search','溫度感測\\(室內\\)') 
+                | map(attribute='entity_id') | list }}
+            room_vals: >-
+              {{ expand(room_sensors) | selectattr('state','is_number') | map(attribute='state') | map('float') | list }}
+            T_room: "{{ (room_vals|average)|round(2) if room_vals else none }}"
+            room_names: >-
+              {{ expand(room_sensors) | map(attribute='attributes.friendly_name') | map('regex_replace','溫度感測\\(室內\\).*','') | map('trim') | join(' ') if room_sensors else '無' }}
+            new_mode: >-
+              {% if T_ref is none %}
+                {{ hvac }}
+              {% elif hvac == 'fan_only' %}
+                {% if T_ref >= c_on or (T_room and T_room >= c_on) %} cool
+                {% elif T_ref <= h_on or (T_room and T_room <= h_on) %} heat
+                {% else %} fan_only {% endif %}
+              {% elif hvac == 'cool' and T_ref <= c_off and (not T_room or T_room <= c_off) %}
+                fan_only
+              {% elif hvac == 'heat' and T_ref >= h_off and (not T_room or T_room >= h_off) %}
+                fan_only
+              {% else %}
+                {{ hvac }}
+              {% endif %}
+        - condition: template
+          value_template: "{{ T_ref is none or new_mode != hvac }}"
+        - if:
+            - condition: template
+              value_template: "{{ new_mode != hvac }}"
+          then:
+            - action: climate.set_hvac_mode
+              target:
+                entity_id: "{{ c }}"
+              data:
+                hvac_mode: "{{ new_mode }}"
+        - action: persistent_notification.create
+          data:
+            title: >-
+              HVAC空調{% if T_ref is none %}控制-失敗{% else %}切換-{{ {'cool':'冷氣','heat':'暖氣','fan_only':'送風'}.get(new_mode,'無') }}{% endif %}-{{ area }}
+            message: >-
+              全域參照溫度: {{ T_ref ~ '°C' if T_ref else '不可用' }}
+              房間平均: {{ T_room ~ '°C' if T_room else '不可用' }}
+              感測器: {{ room_names }}

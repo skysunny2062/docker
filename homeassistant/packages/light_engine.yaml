@@ -1,0 +1,69 @@
+# -----------1樓-----------
+timer:
+  switch_xiaomi_cn_1110894493_pro3_on_p_2_1:
+    name: 車庫燈
+  switch_xiaomi_cn_1110894493_pro3_on_p_3_1:
+    name: 入戶燈
+  switch_xiaomi_cn_1110894493_pro3_on_p_4_1:
+    name: 玄關燈
+  switch_xiaomi_cn_1133595682_pro2_on_p_3_1:
+    name: 後陽台燈
+  switch_xiaomi_cn_1133595682_pro2_on_p_2_1:
+    name: 排氣扇
+# -----------廚房-----------
+  switch_xiaomi_cn_1102979135_pro3_on_p_3_1:
+    name: 燈
+# -----------頂樓-----------
+  switch_xiaomi_cn_1103292876_pro3_on_p_4_1:
+    name: 花圃燈
+  switch_xiaomi_cn_1103292876_pro3_on_p_3_1:
+    name: 室內燈
+  switch_xiaomi_cn_1132111962_pro2_on_p_3_1:
+    name: 後陽台燈
+# -----------不分區-----------
+  switch_xiaomi_cn_1110466850_pro3_on_p_3_1:
+    name: 餐廳燈
+  switch_xiaomi_cn_1110466850_pro3_on_p_2_1:
+    name: 1~2樓轉角燈
+  switch_xiaomi_cn_1102979135_pro3_on_p_4_1:
+    name: 2~3樓轉角燈
+  switch_xiaomi_cn_1110466749_pro3_on_p_2_1:
+    name: 3樓樓梯燈
+  switch_xiaomi_cn_1110466749_pro3_on_p_3_1:
+    name: 3~4樓轉角燈
+  switch_xiaomi_cn_1110466749_pro3_on_p_4_1:
+    name: 4樓樓梯燈
+  switch_xiaomi_cn_1103292876_pro3_on_p_2_1:
+    name: 4~5樓轉角燈
+# --------------------------
+script:
+  light_adjustable_mode:
+    alias: 全屋-可調燈模式-中樞
+    icon: mdi:routes
+    description: 根據mode控制單燈Day/Night 預設Night 
+    mode: parallel
+    max: 50
+    fields:
+      entity_id:
+        description: 燈的實體ID
+      mode:
+        description: 非Day即Night
+    sequence:
+    - choose:
+      - conditions:
+        - condition: template
+          value_template: '{{ mode == ''Day'' }}'
+        sequence:
+        - action: light.turn_on
+          target:
+            entity_id: '{{ entity_id }}'
+          data:
+            color_temp_kelvin: 4500
+            brightness_pct: 100
+      default:
+      - action: light.turn_on
+        target:
+          entity_id: '{{ entity_id }}'
+        data:
+          effect: Night
+          brightness_pct: 100

@@ -1,0 +1,44 @@
+automation:
+  - id: '1772333970001'
+    alias: 廚房-風扇-監控
+    triggers:
+    - trigger: state
+      entity_id: binary_sensor.linp_cn_blt_3_1kfrqkte0k800_es2_occupancy_status_p_2_1078
+      to: 'on'
+      for: 00:05:00
+      id: turn_on
+    - trigger: state
+      entity_id:
+      - switch.xiaomi_cn_1102979135_pro3_on_p_3_1
+      - binary_sensor.linp_cn_blt_3_1kfrqkte0k800_es2_occupancy_status_p_2_1078
+      to: 'off'
+      id: turn_off
+    actions:
+    - choose:
+      - conditions:
+        - condition: trigger
+          id: turn_on
+        - condition: state
+          entity_id: switch.xiaomi_cn_1102979135_pro3_on_p_3_1
+          state: 'on'
+        - condition: numeric_state
+          entity_id: sensor.miaomiaoc_cn_blt_3_1jq23unsc4s00_t9_temperature_p_3_1001
+          above: 28
+        - condition: state
+          entity_id: fan.dmaker_cn_453830094_p10_s_2_fan
+          state: 'off'
+        sequence:
+        - action: fan.turn_on
+          target:
+            entity_id: fan.dmaker_cn_453830094_p10_s_2_fan
+      - conditions:
+        - condition: trigger
+          id: turn_off
+        - condition: state
+          entity_id: fan.dmaker_cn_453830094_p10_s_2_fan
+          state: 'on'
+        sequence:
+        - action: fan.turn_off
+          target:
+            entity_id: fan.dmaker_cn_453830094_p10_s_2_fan
+    mode: restart

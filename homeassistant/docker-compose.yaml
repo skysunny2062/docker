@@ -1,0 +1,16 @@
+services:
+  HomeAssistant:
+    image: homeassistant/home-assistant:latest
+    container_name: HomeAssistant
+    restart: unless-stopped
+    networks:
+      vlan107:
+        ipv4_address: 192.168.107.2
+    environment:
+      - TZ=Asia/Taipei
+    volumes:
+      - .:/config
+
+networks:
+  vlan107:
+    external: true

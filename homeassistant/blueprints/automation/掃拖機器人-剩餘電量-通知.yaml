@@ -1,0 +1,32 @@
+blueprint:
+  name: 掃拖機器人-剩餘電量-通知
+  description: 當掃拖機器人返回中維持15秒後，自動播報剩餘電量。
+  domain: automation
+  input:
+    vacuum_entity:
+      name: 掃拖機器人
+      selector:
+        entity:
+          domain: vacuum
+
+mode: restart
+
+trigger:
+  - platform: state
+    entity_id: !input vacuum_entity
+    to: "returning"
+    for: 00:00:15
+action:
+  - variables:
+      robot_ent: !input vacuum_entity
+      battery_ent: "{{ robot_ent | replace('vacuum.', 'sensor.') ~ '_battery_level_p_3_1' }}"
+      battery_raw: "{{ states(battery_ent) }}"
+      battery_ok: "{{ battery_raw not in ['unknown', 'unavailable', ''] }}"
+  - if:
+      - condition: template
+        value_template: "{{ battery_ok }}"
+    then:
+      - action: script.notify_router
+        data:
+          message: "掃拖機器人 剩餘電量{{ battery_raw | int(0) }}"
+          room: "{{ area_name(robot_ent) }}"
