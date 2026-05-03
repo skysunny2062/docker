@@ -2,6 +2,13 @@ http:
   pprof:
     port: 6060
     enabled: false
+  doh:
+    routes:
+      - GET /dns-query
+      - POST /dns-query
+      - GET /dns-query/{ClientID}
+      - POST /dns-query/{ClientID}
+    insecure_enabled: false
   address: 0.0.0.0:3000
   session_ttl: 720h
 users:
@@ -65,8 +72,9 @@ dns:
   bootstrap_prefer_ipv6: false
   upstream_timeout: 5s
   private_networks: []
-  use_private_ptr_resolvers: false
-  local_ptr_upstreams: []
+  use_private_ptr_resolvers: true
+  local_ptr_upstreams:
+    - 192.168.0.254
   use_dns64: false
   dns64_prefixes: []
   serve_http3: false
@@ -84,7 +92,6 @@ tls:
   port_dns_over_quic: 853
   port_dnscrypt: 0
   dnscrypt_config_file: ""
-  allow_unencrypted_doh: false
   certificate_chain: ""
   private_key: ""
   certificate_path: ""
@@ -133,6 +140,7 @@ whitelist_filters: []
 user_rules:
   - '@@||perseus-productanalytics.deliveryhero.net^$important'
   - '@@||adashx.m.taobao.com^$important'
+  - '@@||dataflow.biliapi.com^$important'
   - ""
 dhcp:
   enabled: false
@@ -189,7 +197,7 @@ clients:
   runtime_sources:
     whois: true
     arp: true
-    rdns: false
+    rdns: true
     dhcp: true
     hosts: true
   persistent: []
@@ -206,4 +214,4 @@ os:
   group: ""
   user: ""
   rlimit_nofile: 0
-schema_version: 33
+schema_version: 34
