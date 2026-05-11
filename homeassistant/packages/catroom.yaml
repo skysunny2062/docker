@@ -247,10 +247,10 @@ script:
       eco_sw: switch.xiaomi_cn_553562745_c24_eco_p_2_7
       heater_sw: switch.xiaomi_cn_553562745_c24_heater_p_2_9
       windfeel_sel: select.xiaomi_cn_553562745_c24_vertical_angle_p_3_6
-      occ_cool_t: 27.5
+      occ_cool_t: 27
       occ_heat_t: 22.5
       occ_air_pct: 50
-      vac_cool_t: 28
+      vac_cool_t: 27.5
       vac_heat_t: 21
       vac_air_pct: 33
     sequence:
