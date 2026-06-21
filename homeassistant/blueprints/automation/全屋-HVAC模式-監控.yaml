@@ -18,7 +18,7 @@ blueprint:
         number: { min: 18, max: 32, step: 0.5 }
     c_off:
       name: 冷氣關閉
-      default: 27.0
+      default: 26.0
       selector: *temp_selector
     h_on:
       name: 暖氣開啟

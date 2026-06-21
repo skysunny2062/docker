@@ -28,6 +28,7 @@
       - switch.xiaomi_cn_1110894493_pro3_on_p_2_1
       - switch.xiaomi_cn_1103292876_pro3_on_p_4_1
       - switch.xiaomi_cn_1133595682_pro2_on_p_2_1
+      - switch.xiaomi_cn_1110374616_pro1_on_p_2_1
 - id: '1769890598739'
   alias: 全屋-超2小時自動關(保底關燈)-監控
   use_blueprint:

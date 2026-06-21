@@ -6,6 +6,8 @@ timer:
     name: 入戶燈
   switch_xiaomi_cn_1110894493_pro3_on_p_4_1:
     name: 玄關燈
+  switch_xiaomi_cn_1110374616_pro1_on_p_2_1:
+    name: 臥室燈
   switch_xiaomi_cn_1133595682_pro2_on_p_3_1:
     name: 後陽台燈
   switch_xiaomi_cn_1133595682_pro2_on_p_2_1:
