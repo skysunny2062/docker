@@ -85,7 +85,7 @@ automation:
     - action: script.notify_router
       data:
         room: 客廳
-        message: 警告 客廳門未關好
+        message: 警告，客廳門未關好
     - wait_for_trigger:
         - trigger: template
           value_template: "{{ is_state(door, 'off') }}"
@@ -97,7 +97,7 @@ automation:
       - action: script.notify_router
         data:
           room: 客廳
-          message: 警告 客廳門超時未關好 空調自動關閉
+          message: 警告，客廳門超時未關好，空調自動關閉
       - action: climate.turn_off
         target:
           entity_id: "{{ hvac }}"

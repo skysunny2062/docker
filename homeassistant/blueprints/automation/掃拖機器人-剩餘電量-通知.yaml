@@ -28,5 +28,5 @@ action:
     then:
       - action: script.notify_router
         data:
-          message: "掃拖機器人 剩餘電量{{ battery_raw | int(0) }}"
+          message: "掃拖機器人，剩餘電量{{ battery_raw | int(0) }}"
           room: "{{ area_name(robot_ent) }}"

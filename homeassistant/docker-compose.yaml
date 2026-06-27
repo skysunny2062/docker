@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     networks:
       vlan107:
-        ipv4_address: 192.168.107.3
+        ipv4_address: 192.168.107.9
     environment:
       - TZ=Asia/Taipei
     volumes:
