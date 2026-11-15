@@ -109,14 +109,19 @@ automation:
         for: 01:00:00
         id: 低
     actions:
-      - condition: template
-        value_template: state_attr('climate.cnhdm_cn_2107731316_wkq01', 'fan_mode') != trigger.id
-      - action: climate.set_fan_mode
-        target:
-          entity_id: climate.cnhdm_cn_2107731316_wkq01
-        data:
-          fan_mode: '{{ trigger.id }}'
-    mode: single
+      - variables:
+          fan: "{{ trigger.id }}"
+      - if:
+          - condition: template
+            value_template: >
+              {{ state_attr('climate.cnhdm_cn_2107731316_wkq01', 'fan_mode') != fan }}
+        then:
+          - action: climate.set_fan_mode
+            target:
+              entity_id: climate.cnhdm_cn_2107731316_wkq01
+            data:
+              fan_mode: "{{ fan }}"
+
 
 script:
   catroom_sleep:
