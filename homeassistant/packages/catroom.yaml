@@ -93,21 +93,29 @@ automation:
   - id: '1772339524270'
     alias: 4樓貓房-浴室排氣扇-監控
     triggers:
-    - trigger: state
-      entity_id:
-      - switch.xiaomi_cn_1082911602_pro2_on_p_3_1
-      to:
-      - 'on'
-      for: 00:02:00
-    conditions:
-    - condition: state
-      entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_2_1
-      state:
-      - 'off'
+      - trigger: state
+        entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_3_1
+        to: 'on'
+        for: 00:02:00
+        id: 高
+      - trigger: state
+        entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_3_1
+        to: 'off'
+        for: 00:10:00
+        id: 中
+      - trigger: state
+        entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_3_1
+        to: 'off'
+        for: 01:00:00
+        id: 低
     actions:
-    - action: switch.turn_on
-      target:
-        entity_id: switch.xiaomi_cn_1082911602_pro2_on_p_2_1
+      - condition: template
+        value_template: state_attr('climate.cnhdm_cn_2107731316_wkq01', 'fan_mode') != trigger.id
+      - action: climate.set_fan_mode
+        target:
+          entity_id: climate.cnhdm_cn_2107731316_wkq01
+        data:
+          fan_mode: '{{ trigger.id }}'
     mode: single
 
 script:
